@@ -26,7 +26,7 @@ jobs:
         run: pip install semgrep
 
       - name: Esegui scansione Semgrep
-        run: semgrep scan --config="p/php" --config="p/symfony" --sarif --output=semgrep.sarif
+        run: semgrep scan --config="p/php" --sarif --output=semgrep.sarif
         continue-on-error: true
 
       - name: Carica i risultati su GitHub Security
