@@ -42,12 +42,12 @@ jobs:
 
   checkov:
     name: run checkov
-    needs: [gitleaks , codeql, sonarqube, semgrep]
+    needs: [gitleaks]
     uses: ./.github/workflows/checkov.yml 
 
   trivy:
     name: run trivy
-    needs: [gitleaks , codeql, sonarqube, semgrep]
+    needs: [gitleaks]
     uses: ./.github/workflows/trivy.yml
     with:
       image_name: "juicyshop"
