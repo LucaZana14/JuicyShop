@@ -24,4 +24,10 @@ jobs:
 
   codeql:
     name: run CodeQL
+    needs: [gitleaks]
     uses: ./.github/workflows/codeql.yml 
+
+  bandit:
+    name: run Bandit
+    needs: [gitleaks]
+    uses: ./.github/workflows/bandit.yml
