@@ -7,7 +7,7 @@ on:
         description: 'Lista JSON dei linguaggi da analizzare, es. ["python"] o ["python","javascript"]'
         required: false
         type: string
-        default: '["python" , "javascript"]'
+        default: '["python" , "javascript" , "actions"]'
       queries:
         description: "Query suite da usare"
         required: false
