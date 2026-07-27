@@ -32,6 +32,6 @@ jobs:
     uses: ./.github/workflows/sonarqube.yml
     with:
       sonar_organization: lucazana14
-      # derivato dal nome del repo invece di essere scritto a mano
+      # derivato dal nome del repo invece di essere scritto
       sonar_project_key: lucazana14_${{ github.event.repository.name }}
     secrets: inherit
