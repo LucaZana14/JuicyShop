@@ -39,3 +39,8 @@ jobs:
     name: run semgrep
     needs: [gitleaks]
     uses: ./.github/workflows/semgrep.yml
+
+  checkov:
+    name: run checkov
+    needs: [gitleaks , semgrep , codeql , sonarqube]
+    uses: ./.github/workflows/checkov.yml 

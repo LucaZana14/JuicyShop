@@ -1,0 +1,62 @@
+name: "IaC Security - Checkov"
+
+on:
+  workflow_call:
+    inputs:
+      directory:
+        description: "Directory da analizzare"
+        required: false
+        type: string
+        default: "."
+      framework:
+        description: "Framework IaC da controllare, separati da virgola"
+        required: false
+        type: string
+        default: "terraform,kubernetes,github_actions,dockerfile"
+      sarif_category:
+        description: "Categoria SARIF per distinguere più run sulla stessa repo"
+        required: false
+        type: string
+        default: "checkov-iac"
+
+permissions:
+  issues: write
+  contents: read
+  security-events: write
+
+jobs:
+  checkov:
+    name: Checkov Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@v2 
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run Checkov action
+        uses: bridgecrewio/checkov-action@v2
+        with:
+          directory: ${{ inputs.directory }}
+          download_external_modules: true
+          framework: ${{ inputs.framework }}
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+          soft_fail: true
+
+      - name: Carica i risultati su GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() # Esegue l'upload anche se Checkov trova degli errori
+        with:
+          sarif_file: results.sarif
+          category: ${{ inputs.sarif_category }}
+          wait-for-processing: true
