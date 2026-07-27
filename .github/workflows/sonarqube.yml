@@ -46,6 +46,7 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.python.version=3
             -Dsonar.branch.name=${{ github.ref_name }}
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/*.json,**/*.xml,**/*.css,**/frontend/src/assets/**
 
       - name: Convert SonarCloud issues to SARIF
         if: always()
