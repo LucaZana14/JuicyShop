@@ -20,3 +20,5 @@ jobs:
           target: 'https://preview.owasp-juice.shop'
           rules_file_name: '.zap/rules.tsv'
           cmd_options: '-a -j'
+
+          /Users/luca/Documents/Lavoro/A-cube/juice-shop-master/.github/workflows/gitleaks.yml

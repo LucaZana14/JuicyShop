@@ -1,0 +1,24 @@
+name: Master Security Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: run gitLeaks
+    uses: ./.github/workflows/gitleaks.yml 
+    secrets: inherit
+

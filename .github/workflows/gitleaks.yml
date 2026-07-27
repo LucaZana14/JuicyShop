@@ -1,0 +1,87 @@
+name: Secret Scanning - GitLeaks
+
+on:
+  workflow_call:
+    inputs:
+      fetch_depth:
+        description: "Profondità del checkout (0 = intera history, necessario per trovare secret in commit vecchi)"
+        required: false
+        type: number
+        default: 0
+      gitleaks_version:
+        description: "Versione di gitleaks da installare"
+        required: false
+        type: string
+        default: "8.24.3"
+      config_path:
+        description: "Path a un file di config gitleaks custom (vuoto = usa la config di default)"
+        required: false
+        type: string
+        default: ""
+      sarif_category:
+        description: "Categoria SARIF per distinguere più run sulla stessa repo"
+        required: false
+        type: string
+        default: "gitleaks-secrets"
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: GitLeaks Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout del codice
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: ${{ inputs.fetch_depth }}
+
+      - name: Installa gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v${{ inputs.gitleaks_version }}/gitleaks_${{ inputs.gitleaks_version }}_linux_x64.tar.gz \
+            | tar -xz -C /tmp
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Esegui gitleaks su tutta la repo
+        run: |
+          CONFIG_FLAG=""
+          if [ -n "${{ inputs.config_path }}" ]; then
+            CONFIG_FLAG="--config ${{ inputs.config_path }}"
+          fi
+          gitleaks detect \
+            --source . \
+            $CONFIG_FLAG \
+            --report-format sarif \
+            --report-path results.sarif \
+            --redact \
+            --exit-code 0 \
+            --verbose
+
+      - name: Debug — quanti leak trovati
+        if: always()
+        run: |
+          if [ -f results.sarif ]; then
+            python3 -c "import json; d=json.load(open('results.sarif')); print('Leak trovati:', sum(len(r['results']) for r in d['runs']))"
+          else
+            echo "results.sarif non generato!"
+            exit 1
+          fi
+
+      - name: Carica i risultati su GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif
+          category: ${{ inputs.sarif_category }}
