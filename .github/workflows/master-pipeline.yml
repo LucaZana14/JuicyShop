@@ -42,5 +42,13 @@ jobs:
 
   checkov:
     name: run checkov
-    needs: [gitleaks , semgrep , codeql , sonarqube]
+    needs: [gitleaks , codeql, sonarqube, semgrep]
     uses: ./.github/workflows/checkov.yml 
+
+  trivy:
+    name: run trivy
+    needs: [gitleaks , codeql, sonarqube, semgrep]
+    uses: ./.github/workflows/trivy.yml
+    with:
+      image_name: ${{ github.event.repository.name }}
+      image_tag: ci

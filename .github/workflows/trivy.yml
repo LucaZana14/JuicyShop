@@ -1,0 +1,109 @@
+name: Trivy Docker+Image Scan + FileSystem
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: "Nome dell'immagine Docker da costruire e scansionare"
+        required: false
+        type: string
+        default: "app-under-test"
+      image_tag:
+        description: "Tag dell'immagine Docker"
+        required: false
+        type: string
+        default: "ci"
+      dockerfile_context:
+        description: "Contesto di build del Dockerfile"
+        required: false
+        type: string
+        default: "."
+      generate_sbom:
+        description: "Se true, genera anche la SBOM in formato CycloneDX"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  run-trivy:
+    name: Trivy Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v7 
+
+      - name: Build dell'immagine Docker
+        run: docker build -t ${{ inputs.image_name }}:${{ inputs.image_tag }} ${{ inputs.dockerfile_context }}
+
+      - name: Esegui Trivy (IaC e Dockerfile)
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Esegui Trivy (immagine Docker)
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: 'image'
+          image-ref: '${{ inputs.image_name }}:${{ inputs.image_tag }}'
+          format: 'sarif'
+          output: 'trivy-results-image.sarif'
+
+      - name: Esegui Trivy (FileSystem)
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results-fs.sarif'
+
+      - name: Genera Software Bill of Materials (SBOM)
+        if: ${{ inputs.generate_sbom }}
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: 'image'
+          scan-ref: '${{ inputs.image_name }}:${{ inputs.image_tag }}'
+          format: 'cyclonedx'
+          output: 'bom.json'
+
+      - name: Carica SARIF su GitHub
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-iac
+          wait-for-processing: true
+
+      - name: Carica SARIF image su GitHub
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-results-image.sarif
+          category: trivy-container
+          wait-for-processing: true
+
+      - name: Carica SARIF filesystem su GitHub
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-results-fs.sarif
+          category: trivy-fs
+          wait-for-processing: true
+
+      - name: Archivia la SBOM come Artefatto
+        if: ${{ inputs.generate_sbom }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-cyclonedx-${{ inputs.image_name }}
+          path: bom.json
+          retention-days: 14
