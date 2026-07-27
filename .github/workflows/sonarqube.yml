@@ -1,0 +1,64 @@
+name: SonarQube Quality Scan
+
+on:
+  workflow_call:
+    inputs:
+      sonar_organization:
+        description: "Organization SonarCloud"
+        required: true
+        type: string
+      sonar_project_key: 
+        description: "Project key su SonarCloud"
+        required: true
+        type: string
+      sonar_host_url:
+        description: "URL dell'istanza SonarQube/SonarCloud"
+        required: false
+        type: string
+        default: "https://sonarcloud.io"
+    secrets:
+      SONAR_TOKEN:
+        required: true
+
+jobs:
+  sonar-scan:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Esegui scansione SonarQube
+        uses: sonarsource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ inputs.sonar_host_url }}
+        with:
+          args: >
+            -Dsonar.organization=${{ inputs.sonar_organization }}
+            -Dsonar.projectKey=${{ inputs.sonar_project_key }}
+            -Dsonar.sources=.
+            -Dsonar.python.version=3
+            -Dsonar.branch.name=${{ github.ref_name }}
+
+      - name: Convert SonarCloud issues to SARIF
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORG: ${{ inputs.sonar_organization }}
+          SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
+          SONAR_HOST_URL: ${{ inputs.sonar_host_url }}
+        run: |
+          python3 .github/scripts/sonar_to_sarif.py
+
+      - name: Carica i risultati su GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: sonarcloud.sarif

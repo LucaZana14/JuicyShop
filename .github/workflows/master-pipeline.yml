@@ -26,8 +26,12 @@ jobs:
     name: run CodeQL
     needs: [gitleaks]
     uses: ./.github/workflows/codeql.yml 
-
-  bandit:
-    name: run Bandit
+  sonarqube:
+    name: run sonarqube
     needs: [gitleaks]
-    uses: ./.github/workflows/bandit.yml
+    uses: ./.github/workflows/sonarqube.yml
+    with:
+      sonar_organization: lucazana14
+      # derivato dal nome del repo invece di essere scritto a mano
+      sonar_project_key: lucazana14_${{ github.event.repository.name }}
+    secrets: inherit
