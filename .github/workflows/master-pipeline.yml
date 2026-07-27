@@ -50,5 +50,5 @@ jobs:
     needs: [gitleaks , codeql, sonarqube, semgrep]
     uses: ./.github/workflows/trivy.yml
     with:
-      image_name: ${{ github.event.repository.name }}
+      image_name: "juicyshop"
       image_tag: ci
