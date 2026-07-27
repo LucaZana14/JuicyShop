@@ -22,3 +22,6 @@ jobs:
     uses: ./.github/workflows/gitleaks.yml 
     secrets: inherit
 
+  codeql:
+    name: run CodeQL
+    uses: ./.github/workflows/codeql.yml 
