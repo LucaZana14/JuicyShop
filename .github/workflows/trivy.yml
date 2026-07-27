@@ -25,7 +25,11 @@ on:
         default: true
 
 # Risolve l'errore CKV2_GHA_1 di Checkov
-permissions: read-all 
+permissions: 
+    contents: read
+    security-events: write
+    actions: read
+    issues: write
 
 jobs:
   run-trivy:
