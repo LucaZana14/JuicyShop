@@ -51,7 +51,7 @@ jobs:
           framework: ${{ inputs.framework }}
           output_format: sarif
           output_file_path: results.sarif
-          continue_on_fail: true # Continua anche se Checkov trova degli errori
+          if: always()
 
       - name: Carica i risultati su GitHub Security
         uses: github/codeql-action/upload-sarif@v4
