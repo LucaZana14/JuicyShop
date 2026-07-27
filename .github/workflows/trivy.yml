@@ -7,12 +7,12 @@ on:
         description: "Nome dell'immagine Docker da costruire e scansionare"
         required: false
         type: string
-        default: "app-under-test"
+        default: "bkimminich/juice-shop"
       image_tag:
         description: "Tag dell'immagine Docker"
         required: false
         type: string
-        default: "ci"
+        default: "latest-amd64"
       dockerfile_context:
         description: "Contesto di build del Dockerfile"
         required: false
@@ -24,20 +24,26 @@ on:
         type: boolean
         default: true
 
+# Risolve l'errore CKV2_GHA_1 di Checkov
+permissions: read-all 
+
 jobs:
   run-trivy:
     name: Trivy Scan
     runs-on: ubuntu-latest
+    
+    # Permessi specifici per il job per poter caricare il SARIF
     permissions:
       contents: read
       security-events: write
 
     steps:
       - name: Checkout del codice
-        uses: actions/checkout@v7 
+        uses: actions/checkout@v4 # Corretto alla versione stabile v4
 
       - name: Build dell'immagine Docker
-        run:  docker build -t bkimminich/juice-shop:latest-amd64
+        # Ora usa le variabili e ha il punto finale
+        run:  docker build -t ${{ inputs.image_name }}:${{ inputs.image_tag }} ${{ inputs.dockerfile_context }}
 
       - name: Esegui Trivy (IaC e Dockerfile)
         uses: aquasecurity/trivy-action@master
@@ -53,7 +59,7 @@ jobs:
         continue-on-error: true
         with:
           scan-type: 'image'
-          image-ref: '${{ inputs.image_name }}:${{ inputs.image_tag }}'
+          image-ref: '${{ inputs.image_name }}:${{ inputs.image_tag }}' # Allineato
           format: 'sarif'
           output: 'trivy-results-image.sarif'
 
@@ -72,7 +78,7 @@ jobs:
         continue-on-error: true
         with:
           scan-type: 'image'
-          scan-ref: '${{ inputs.image_name }}:${{ inputs.image_tag }}'
+          image-ref: '${{ inputs.image_name }}:${{ inputs.image_tag }}' # Corretto da scan-ref a image-ref
           format: 'cyclonedx'
           output: 'bom.json'
 
@@ -102,8 +108,8 @@ jobs:
 
       - name: Archivia la SBOM come Artefatto
         if: ${{ inputs.generate_sbom }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4 # Corretto alla versione stabile v4
         with:
-          name: sbom-cyclonedx-${{ inputs.image_name }}
+          name: sbom-cyclonedx
           path: bom.json
           retention-days: 14

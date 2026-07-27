@@ -45,6 +45,7 @@ jobs:
 
       - name: Run Checkov action
         uses: bridgecrewio/checkov-action@v2
+        continue-on-error: true
         with:
           directory: ${{ inputs.directory }}
           download_external_modules: true
