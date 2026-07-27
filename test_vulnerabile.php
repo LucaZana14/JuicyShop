@@ -24,7 +24,7 @@ class InsecureController {
     }
 
     // 🚨 3. OS Command Injection
-    // Prende un parametro in ingresso e lo passa a una funzione che esegue comandi sul server.
+    // Prende un parametwefewro in ingresso e lo passa a una funzione che esegue comandi sul server.
     public function checkServerPing() {
         $targetIp = $_REQUEST['ip'];
         
