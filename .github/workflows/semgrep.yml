@@ -1,0 +1,36 @@
+name: Semgrep PHP & Symfony Scan
+
+on:
+  workflow_call:
+
+jobs:
+  semgrep:
+    name: Run Semgrep (PHP/Symfony)
+    runs-on: ubuntu-latest
+    
+    # Permessi minimi richiesti
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installa Semgrep CLI
+        run: pip install semgrep
+
+      - name: Esegui scansione Semgrep
+        run: semgrep scan --config="p/php" --config="p/symfony" --sarif --output=semgrep.sarif
+        continue-on-error: true
+
+      - name: Carica i risultati su GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
