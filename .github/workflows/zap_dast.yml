@@ -40,6 +40,8 @@ jobs:
                 RESPONSE=$(curl -s -X POST "http:localhost:3000/reset/user/login" \
                   -H "Content-Type: application/json" \
                   -d '{"email": "admin@juice-sh.op", "password": "admin123"}')
+                echo "risposta server:"
+                echo "$RESPONSE"
 
                 TOKEN=$( echo $RESPONSE | jq -r .authentication.token)
 
