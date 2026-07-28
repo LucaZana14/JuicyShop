@@ -87,7 +87,7 @@ jobs:
 
       - name: Esegui scansione OWASP ZAP (Automation Framework)
         run: |
-          docker run --user root --network host --shm-size=2g -v ${{ github.workspace }}:/zap/wrk/:rw -t zaproxy/zap-stable zap.sh -cmd -autorun /zap/wrk/juice-shop-zap.yaml
+          docker run --user root --network host --shm-size=2g -v ${{ github.workspace }}:/zap/wrk/:rw -t zaproxy/zap-stable xvfb-run zap.sh -cmd -autorun /zap/wrk/juice-shop-zap.yaml
       - name: Adatta il SARIF per GitHub Code Scanning
         if: always()
         run: |
