@@ -3,99 +3,95 @@ name: DAST ZAP Scan
 on: workflow_call
 
 jobs:
-    zap-scan:
-        name: ZAP DAST Scan
-        runs-on: ubuntu-latest
+  zap-scan:
+    name: ZAP DAST Scan
+    runs-on: ubuntu-latest
 
-        permissions:
-            issues: write
-            contents: read
-            security-events: write
+    permissions:
+      issues: write
+      contents: read
+      security-events: write
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v7 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7 
+      
+
+      - name: Set up docker buildx
+        uses: docker/setup-buildx-action@v4 
+      
+      - name: build dell'immagine docker con cache
+        uses: docker/build-push-action@v7 
+        with:
+          context: .
+          load: true
+          tags: juicyshop:local
+          cache-from: type=gha
+          cache-to: type=gha, mode=max
+      - name: Avvio immagine
+        run: |
+          docker run -d --name juice-app -p 3000:3000 juicyshop:local
+          echo "attendo che juice sia online"
+          timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
+      - name: Login e Setup Auth Token
+        run: |
+          echo "Eseguo il login come amministratore..."
+          curl -s -X POST "http://localhost:3000/rest/user/login" \
+              -H "Content-Type: application/json" \
+              -d '{"email": "admin@juice-sh.op", "password": "admin123"}' > risposta.json
+          TOKEN=$(jq -r '.authentication.token' risposta.json)
+          if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
+              echo "Errore critico: Token non trovato."
+              exit 1
+          fi
+          echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "Token JWT ottenuto con successo!"
+      
+      - name: creazione e configurazione ZAP
+        run: |
+          cat << 'EOF' > juice-shop-zap.yaml
+          env:
+            contexts:
+              - name: JuiceShop-context
+                urls:
+                  - http//localhost:3000
+          jobs:
+            - type: replacer
+              rules:
+                - description: Auth Token
+                  matchType: req_header_str
+                  matchString: Authorization
+                  replacementString: Bearer ${{ env.API_TOKEN }}
             
+            - type: spider
+              parameters:
+                maxDuration: 2
+              
+            - type: spiderAjax
+              parameters:
+                maxDuration: 3
+              
+            - type: passiveScan-config
 
-            - name: Set up docker buildx
-              uses: docker/setup-buildx-action@v4 
-            
-            - name: build dell'immagine docker con cache
-              uses: docker/build-push-action@v7 
-              with:
-                context: .
-                load: true
-                tags: juicyshop:local
-                cache-from: type=gha
-                cache-to: type=gha, mode=max
-            - name: Avvio immagine
-              run: |
-                docker run -d --name juice-app -p 3000:3000 juicyshop:local
-                echo "attendo che juice sia online"
-                timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
-            - name: Login e Setup Auth Token
-              run: |
-                echo "Eseguo il login come amministratore..."
-                curl -s -X POST "http://localhost:3000/rest/user/login" \
-                    -H "Content-Type: application/json" \
-                    -d '{"email": "admin@juice-sh.op", "password": "admin123"}' > risposta.json
-                TOKEN=$(jq -r '.authentication.token' risposta.json)
-                if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
-                    echo "Errore critico: Token non trovato."
-                    exit 1
-                fi
-                echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
-                echo "Token JWT ottenuto con successo!"
-            
-            - name: creazione e configurazione ZAP
-              run: |
-                cat << 'EOF' > juice-shop-zap.yaml
-                env:
-                  contexts:
-                    - name: JuiceShop-context
-                      urls:
-                        - http//localhost:3000
-                jobs:
-                  - type: replacer
-                    rules:
-                      - description: Auth Token
-                        matchTipe: req_header_str
-                        matchString: Authorization
-                        replacementString: Bearer ${{ env.API_TOKEN }}
-                  
-                  - type: spider
-                    parameters:
-                      maxDuration: 2
-                    
-                  - type: spiderAjax
-                    parameters:
-                      maxDuration: 3
-                    
-                  - type: passiveScan-config
+            - type: activeScan
+              parameters: 
+                template: sarif-json
+                reportDir: /zap/wrk
+                reportFile: restults
+          EOF
 
-                  - type: activeScan
-                    parameters: 
-                      template: sarif-json
-                      reportDir: /zap/wrk
-                      reportFile: restults
-                EOF
-
-            - name: Esegui scansione OWASP ZAP (Automation Framework)
-              run: |
-                docker run --user root --network host -v ${{ github.workspace }}:/zap/wrk/:rw -t zaproxy/zap-stable zap.sh -cmd -autorun /zap/wrk/juice-shop-zap.yaml
-        
-              # 5. TRADUTTORE SARIF AVANZATO: Riprendiamo i permessi e bonifichiamo il JSON
-            - name: Adatta il SARIF per GitHub Code Scanning
-              if: always()
-              run: |
-                  sudo chown -R $USER:$USER results.json
-                  python3 .github/scripts/clean_zap_sarif.py 
-        
-              # 6. Carichiamo i risultati SARIF 
-            - name: Upload dei risultati DAST su GitHub Security
-              uses: github/codeql-action/upload-sarif@v4
-              if: always()
-              with:
-                sarif_file: results.json
-                category: owasp-zap-dast
+      - name: Esegui scansione OWASP ZAP (Automation Framework)
+        run: |
+          docker run --user root --network host -v ${{ github.workspace }}:/zap/wrk/:rw -t zaproxy/zap-stable zap.sh -cmd -autorun /zap/wrk/juice-shop-zap.yaml
+      - name: Adatta il SARIF per GitHub Code Scanning
+        if: always()
+        run: |
+            sudo chown -R $USER:$USER results.json
+            python3 .github/scripts/clean_zap_sarif.py 
+      - name: Upload dei risultati DAST su GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: results.json
+          category: owasp-zap-dast
 
