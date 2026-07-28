@@ -46,3 +46,56 @@ jobs:
                 fi
                 echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
                 echo "Token JWT ottenuto con successo!"
+            
+            - name: creazione e configurazione ZAP
+              run: |
+                cat << 'EOF' > juice-shop-zap.yaml
+                env:
+                  contexts:
+                    - name: JuiceShop-context
+                      urls:
+                        - http//localhost:3000
+                jobs:
+                  - type: replacer
+                    rules:
+                      - description: Auth Token
+                        matchTipe: req_header_str
+                        matchString: Authorization
+                        replacementString: Bearer ${{ env.API_TOKEN }}
+                  
+                  - type: spider
+                    parameters:
+                      maxDuration: 2
+                    
+                  - type: spiderAjax
+                    parameters:
+                      maxDuration: 3
+                    
+                  - type: passiveScan-config
+
+                  - type: activeScan
+                    parameters: 
+                      template: sarif-json
+                      reportDir: /zap/wrk
+                      reportFile: restults
+                EOF
+
+            - name: Esegui scansione OWASP ZAP (Automation Framework)
+              run: |
+                docker run --user root --network host -v ${{ github.workspace }}:/zap/wrk/:rw -t zaproxy/zap-stable zap.sh -cmd -autorun /zap/wrk/juice-shop-zap.yaml
+        
+              # 5. TRADUTTORE SARIF AVANZATO: Riprendiamo i permessi e bonifichiamo il JSON
+            - name: Adatta il SARIF per GitHub Code Scanning
+              if: always()
+              run: |
+                  sudo chown -R $USER:$USER results.json
+                  python3 .github/scripts/clean_zap_sarif.py 
+        
+              # 6. Carichiamo i risultati SARIF 
+            - name: Upload dei risultati DAST su GitHub Security
+              uses: github/codeql-action/upload-sarif@v4
+              if: always()
+              with:
+                sarif_file: results.json
+                category: owasp-zap-dast
+
