@@ -34,21 +34,31 @@ jobs:
                 echo "attendo che juice sia online"
                 timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
 
-            - name: login e setup Auth Token
+            - name: Super Debug Login
               run: |
-                echo "Eseguo il login come amministratore"
-                RESPONSE=$(curl -s -X POST "http:localhost:3000/reset/user/login" \
-                  -H "Content-Type: application/json" \
-                  -d '{"email": "admin@juice-sh.op", "password": "admin123"}')
-                echo "risposta server:"
-                echo "$RESPONSE"
-
-                TOKEN=$( echo $RESPONSE | jq -r .authentication.token)
-
-                if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
-                  echo "erorre, token non ricevuto"
-                  exit 1
-                fi
-
-                echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
-                echo "token ottenuto con successo"
+                # 1. Disabilitiamo il blocco automatico di GitHub Actions in caso di errore
+                set +e 
+                
+                echo "--- 1. Creo il file con i dati di login ---"
+                echo '{"email": "admin@juice-sh.op", "password": "admin123"}' > payload.json
+                cat payload.json
+                
+                echo "--- 2. Lancio la chiamata di login ---"
+                # Usiamo -v (verbose) per vedere ogni dettaglio della connessione
+                # Salviamo la risposta in un file e gli errori in un altro
+                curl -v -X POST "http://localhost:3000/rest/user/login" \
+                -H "Content-Type: application/json" \
+                -d @payload.json > risposta.json 2> errori_curl.txt
+                
+                # Catturiamo il codice di uscita esatto di curl
+                CURL_EXIT_CODE=$?
+                echo "Il comando curl è terminato con codice: $CURL_EXIT_CODE"
+                
+                echo "--- 3. Errori e Log di Connessione ---"
+                cat errori_curl.txt
+                
+                echo "--- 4. Risposta del Server Juice Shop ---"
+                cat risposta.json
+                
+                # 5. Blocchiamo la pipeline intenzionalmente per leggere i risultati
+                exit 1
