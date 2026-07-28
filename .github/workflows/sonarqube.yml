@@ -1,4 +1,4 @@
-name: SonarQube Quality Scan
+name: "SonarQube Quality Scan"
 
 on:
   workflow_call:

@@ -1,4 +1,4 @@
-name: Trivy Docker+Image Scan + FileSystem
+name: "Trivy Docker+Image Scan + FileSystem"
 
 on:
   workflow_call:

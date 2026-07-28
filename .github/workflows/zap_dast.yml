@@ -1,4 +1,4 @@
-name: DAST ZAP Scan
+name: "DAST ZAP Scan"
 
 on: workflow_call
 
@@ -27,12 +27,15 @@ jobs:
           tags: juicyshop:local
           cache-from: type=gha
           cache-to: type=gha, mode=max
+        
+      # cambia localhost e nome
       - name: Avvio immagine
         run: |
           docker run -d --name juice-app -p 3000:3000 juicyshop:local
           echo "attendo che juice sia online"
           timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
       - name: Login e Setup Auth Token
+          #cambia l'url e le credenziali
         run: |
           echo "Eseguo il login come amministratore..."
           curl -s -X POST "http://localhost:3000/rest/user/login" \
@@ -46,6 +49,7 @@ jobs:
           echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
           echo "Token JWT ottenuto con successo!"
 
+        #cambia nome file yaml e vari urls, cambia anche localhost in openapi
       - name: creazione e configurazione ZAP
         run: |
           cat << 'EOF' > juice-shop-zap.yaml
@@ -68,6 +72,11 @@ jobs:
               parameters:
                 maxDuration: 2
               
+            #- type: openapi
+             # parameters:
+              #  apiFile: /zap/wrk/openapi/vAPI.yaml  #Se vuoi cercare il file direttamente da github
+             #   targetUrl: http://localhost:8081   #se vuoi vederlo a macchina avviata da docker
+            
             - type: passiveScan-config
 
             - type: activeScan

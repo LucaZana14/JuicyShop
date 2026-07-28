@@ -1,4 +1,4 @@
-name: Secret Scanning - GitLeaks
+name: "GitLeaks Secret Scanning"
 
 on:
   workflow_call:

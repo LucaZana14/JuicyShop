@@ -1,4 +1,4 @@
-name: Semgrep PHP & Symfony Scan
+name: "Semgrep PHP & Symfony Scan"
 
 on:
   workflow_call:
