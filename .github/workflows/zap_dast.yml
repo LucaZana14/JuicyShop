@@ -33,32 +33,16 @@ jobs:
                 docker run -d --name juice-app -p 3000:3000 juicyshop:local
                 echo "attendo che juice sia online"
                 timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
-
-            - name: Super Debug Login
+            - name: Login e Setup Auth Token
               run: |
-                # 1. Disabilitiamo il blocco automatico di GitHub Actions in caso di errore
-                set +e 
-                
-                echo "--- 1. Creo il file con i dati di login ---"
-                echo '{"email": "admin@juice-sh.op", "password": "admin123"}' > payload.json
-                cat payload.json
-                
-                echo "--- 2. Lancio la chiamata di login ---"
-                # Usiamo -v (verbose) per vedere ogni dettaglio della connessione
-                # Salviamo la risposta in un file e gli errori in un altro
-                curl -v -X POST "http://localhost:3000/rest/user/login" \
-                -H "Content-Type: application/json" \
-                -d @payload.json > risposta.json 2> errori_curl.txt
-                
-                # Catturiamo il codice di uscita esatto di curl
-                CURL_EXIT_CODE=$?
-                echo "Il comando curl è terminato con codice: $CURL_EXIT_CODE"
-                
-                echo "--- 3. Errori e Log di Connessione ---"
-                cat errori_curl.txt
-                
-                echo "--- 4. Risposta del Server Juice Shop ---"
-                cat risposta.json
-                
-                # 5. Blocchiamo la pipeline intenzionalmente per leggere i risultati
-                exit 1
+                echo "Eseguo il login come amministratore..."
+                curl -s -X POST "http://localhost:3000/rest/user/login" \
+                    -H "Content-Type: application/json" \
+                    -d '{"email": "admin@juice-sh.op", "password": "admin123"}' > risposta.json
+                TOKEN=$(jq -r '.authentication.token' risposta.json)
+                if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
+                    echo "Errore critico: Token non trovato."
+                    exit 1
+                fi
+                echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
+                echo "Token JWT ottenuto con successo!"
