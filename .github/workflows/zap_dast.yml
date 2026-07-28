@@ -76,7 +76,7 @@ jobs:
               parameters: 
                 maxScanDurationInMins: 5
 
-            -type: report
+            - type: report
               parameters:
                 template: sarif-json
                 reportDir: /zap/wrk
