@@ -69,6 +69,7 @@ jobs:
             - type: spiderAjax
               parameters:
                 maxDuration: 3
+                browserId: firefox-headless
               
             - type: passiveScan-config
 
@@ -80,7 +81,7 @@ jobs:
               parameters:
                 template: sarif-json
                 reportDir: /zap/wrk
-                reportFile: results
+                reportFile: results.json
           EOF
 
       - name: Esegui scansione OWASP ZAP (Automation Framework)
