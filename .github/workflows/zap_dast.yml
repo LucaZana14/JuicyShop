@@ -32,12 +32,21 @@ jobs:
               run: |
                 docker run -d --name juice-app -p 3000:3000 juicyshop:local
                 echo "attendo che juice sia online"
-                if ! timeout 180s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'; then
-                echo "TIME OUT con errore 124 non ha risposto in tempo"
-                docker logs juice-app
-                exit 1
+                timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
+
+            - name: login e setup Auth Token
+              run: |
+                echo "Eseguo il login come amministratore"
+                RESPONSE=$(curl -s -X POST "http:localhost:3000/reset/user/login" \
+                  -H "Content-Type: application/json" \
+                  -d '{"email": "admin@juice-sh.op", "password": "admin123"}')
+
+                TOKEN=$( echo $RESPONSE | jq -r .authentication.token)
+
+                if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
+                  echo "erorre, token non ricevuto"
+                  exit 1
                 fi
 
-                echo "Juice shop si è buildato correttamente"
-
-            
+                echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
+                echo "token ottenuto con successo"
