@@ -54,29 +54,27 @@ jobs:
           sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
           gitleaks version
 
-      - name: Esegui gitleaks su tutta la repo
+      - name: Esegui Gitleaks su tutta la repo
         run: |
-          CONFIG_FLAG=""
-          if [ -n "${{ inputs.config_path }}" ]; then
-            CONFIG_FLAG="--config ${{ inputs.config_path }}"
-          fi
+          # Rimossa la flag --redact per non far accorpare gli alert a GitHub
           gitleaks detect \
             --source . \
-            $CONFIG_FLAG \
             --report-format sarif \
             --report-path results.sarif \
-            --redact \
             --exit-code 0 \
             --verbose
 
-      - name: Debug — quanti leak trovati
+      - name: Pulisci il SARIF (Fix Titoli e Livelli)
         if: always()
         run: |
           if [ -f results.sarif ]; then
-            python3 -c "import json; d=json.load(open('results.sarif')); print('Leak trovati:', sum(len(r['results']) for r in d['runs']))"
-          else
-            echo "results.sarif non generato!"
-            exit 1
+            # 1. Promuove i warning a error (così diventano vulnerabilità bloccanti)
+            sed -i 's/"level": "warning"/"level": "error"/g' results.sarif
+            
+            # 2. Sostituisce la bruttissima Regex con un titolo leggibile
+            sed -i 's/(?i)(?:key|api|token|secret|client|passwd|password|auth|access).*;/Generic API Key or Secret/g' results.sarif
+            
+            echo "SARIF pulito e formattato per GitHub Security!"
           fi
 
       - name: Carica i risultati su GitHub Security
