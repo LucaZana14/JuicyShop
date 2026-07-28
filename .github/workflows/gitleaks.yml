@@ -64,19 +64,37 @@ jobs:
             --exit-code 0 \
             --verbose
 
-      - name: Pulisci il SARIF (Fix Titoli e Livelli)
+      - name: Pulisci e Potenzia il SARIF (Fix Titoli e Gravità)
         if: always()
         run: |
           if [ -f results.sarif ]; then
-            # 1. Promuove i warning a error (così diventano vulnerabilità bloccanti)
-            sed -i 's/"level": "warning"/"level": "error"/g' results.sarif
-            
-            # 2. Sostituisce la bruttissima Regex con un titolo leggibile
-            sed -i 's/(?i)(?:key|api|token|secret|client|passwd|password|auth|access).*;/Generic API Key or Secret/g' results.sarif
-            
-            echo "SARIF pulito e formattato per GitHub Security!"
+            python3 -c "
+          import json
+          with open('results.sarif', 'r') as f:
+              sarif = json.load(f)
+          
+          for run in sarif.get('runs', []):
+              # 1. Aggiorna le Regole (da qui GitHub legge la gravità reale)
+              for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
+                  # Inietta la severità Critical (9.0) specifica per le API di GitHub
+                  rule.setdefault('properties', {})['security-severity'] = '9.0'
+                  rule.setdefault('defaultConfiguration', {})['level'] = 'error'
+                  
+                  # Rinomina la bruttissima Regex in un titolo leggibile
+                  if rule.get('name', '').startswith('(?i)'):
+                      rule['name'] = 'Generic API Key or Secret'
+                      if 'shortDescription' in rule:
+                          rule['shortDescription']['text'] = 'Generic API Key or Secret'
+                          
+              # 2. Aggiorna ogni singolo risultato trovato
+              for res in run.get('results', []):
+                  res['level'] = 'error'
+                  
+          with open('results.sarif', 'w') as f:
+              json.dump(sarif, f, indent=2)
+          "
+            echo "SARIF patchato con successo! Tutti i leak sono ora ERROR CRITICI."
           fi
-
       - name: Carica i risultati su GitHub Security
         if: always()
         uses: github/codeql-action/upload-sarif@v4
