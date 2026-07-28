@@ -16,9 +16,20 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v7 
             
-            - name: Build e avvio immagine
+
+            - name: Set up docker buildx
+              uses: docker/setup-buildx-action@v4 
+            
+            - name: build dell'immagine docker con cache
+              uses: docker/build-push-action@v7 
+              with:
+                context: .
+                load: true
+                tags: juicyshop:local
+                cache-from: type=gha
+                cache-to: type=gha, mode=max
+            - name: Avvio immagine
               run: |
-                docker build -t juicyshop:local .
                 docker run -d --name juice-app -p 3000:3000 juicyshop:local
                 echo "attendo che juice sia online"
                 if ! timeout 180s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'; then
