@@ -52,3 +52,9 @@ jobs:
     with:
       image_name: "juicyshop"
       image_tag: ci
+
+  zap:
+    name: run ZAP
+    # needs: [codeql, sonarqube, semgrep, checkov, trivy]
+    # per ora commento i needs per una questione di velocità ma poi andranno riavviati
+    uses: ./.github/workflows/zap_dast.yml 

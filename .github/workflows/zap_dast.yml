@@ -1,0 +1,26 @@
+name: DAST ZAP Scan
+
+on: workflow_call
+
+jobs:
+    zap-scan:
+        name: ZAP DAST Scan
+        runs-on: ubuntu-latest
+
+        permissions:
+            issues: write
+            contents: read
+            security-events: write
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v7 
+            
+            - name: Build e avvio immagine
+              run: |
+                docker build -t juicyshop:local .
+                docker run -d -p 3000:3000 juicyshop:local
+                timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
+                echo "Juice shop si è buildato correttamente"
+
+            
