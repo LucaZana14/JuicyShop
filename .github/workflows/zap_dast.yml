@@ -54,6 +54,8 @@ jobs:
               - name: JuiceShop-context
                 urls:
                   - http://localhost:3000
+                  - http://localhost:3000/#/search
+                  - http://localhost:3000/rest/products/search?q=test
           jobs:
             - type: replacer
               rules:
@@ -65,16 +67,6 @@ jobs:
             - type: spider
               parameters:
                 maxDuration: 2
-              
-            - type: spiderAjax
-              parameters:
-                maxDuration: 3
-                browserId: firefox-headless
-                numberOfBrowsers: 2
-                runOnlyIfModern: true
-                inScopeOnly: true
-                clickDefaultElems: true
-                randomInputs: true
               
             - type: passiveScan-config
 
