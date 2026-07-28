@@ -19,14 +19,14 @@ jobs:
             - name: Build e avvio immagine
               run: |
                 docker build -t juicyshop:local .
-                docker run -d -p 3000:3000 juicyshop:local
+                docker run -d --name juice-app -p 3000:3000 juicyshop:local
                 echo "attendo che juice sia online"
                 if ! timeout 180s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'; then
                 echo "TIME OUT con errore 124 non ha risposto in tempo"
                 docker logs juice-app
                 exit 1
                 fi
-                
+
                 echo "Juice shop si è buildato correttamente"
 
             
