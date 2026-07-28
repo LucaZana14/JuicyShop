@@ -14,14 +14,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7 
-      
+        uses: actions/checkout@v7
 
       - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v4 
-      
+        uses: docker/setup-buildx-action@v4
+
       - name: build dell'immagine docker con cache
-        uses: docker/build-push-action@v7 
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
@@ -46,7 +45,7 @@ jobs:
           fi
           echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
           echo "Token JWT ottenuto con successo!"
-      
+
       - name: creazione e configurazione ZAP
         run: |
           cat << 'EOF' > juice-shop-zap.yaml
@@ -54,7 +53,7 @@ jobs:
             contexts:
               - name: JuiceShop-context
                 urls:
-                  - http//localhost:3000
+                  - http://localhost:3000
           jobs:
             - type: replacer
               rules:
@@ -75,9 +74,13 @@ jobs:
 
             - type: activeScan
               parameters: 
+                maxScanDurationInMins: 5
+
+            -type: report
+              parameters:
                 template: sarif-json
                 reportDir: /zap/wrk
-                reportFile: restults
+                reportFile: results
           EOF
 
       - name: Esegui scansione OWASP ZAP (Automation Framework)
@@ -86,12 +89,11 @@ jobs:
       - name: Adatta il SARIF per GitHub Code Scanning
         if: always()
         run: |
-            sudo chown -R $USER:$USER results.json
-            python3 .github/scripts/clean_zap_sarif.py 
+          sudo chown -R $USER:$USER results.json
+          python3 .github/scripts/clean_zap_sarif.py
       - name: Upload dei risultati DAST su GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: results.json
           category: owasp-zap-dast
-
