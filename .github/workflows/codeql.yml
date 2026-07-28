@@ -7,6 +7,7 @@ on:
         description: 'Lista JSON dei linguaggi da analizzare, es. ["python"] o ["python","javascript"]'
         required: false
         type: string
+        #se vuoi cambiare la matrix seleziona qui cosa vuoi tenere o rimuovere
         default: '["python" , "javascript" , "actions"]'
       queries:
         description: "Query suite da usare"

@@ -7,11 +7,13 @@ on:
         description: "Nome dell'immagine Docker da costruire e scansionare"
         required: false
         type: string
+        #modificare il nome dell'immagine docker
         default: "bkimminich/juice-shop"
       image_tag:
         description: "Tag dell'immagine Docker"
         required: false
         type: string
+        #modificare il tag
         default: "latest-amd64"
       dockerfile_context:
         description: "Contesto di build del Dockerfile"

@@ -1,5 +1,6 @@
 name: "SonarQube Quality Scan"
 
+#ricordarsi di inserire nei secret il SONAR_TOKEN
 on:
   workflow_call:
     inputs:
