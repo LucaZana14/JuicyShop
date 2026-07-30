@@ -89,6 +89,12 @@ jobs:
                 template: sarif-json
                 reportDir: /zap/wrk
                 reportFile: results.json
+
+            -type: report
+              parameters:
+                template: traditional-html-plus
+                reportDir: /zap/wrk
+                reportFile: zap-report.html
           EOF
 
       - name: Esegui scansione OWASP ZAP (Automation Framework)
@@ -99,9 +105,51 @@ jobs:
         run: |
           sudo chown -R $USER:$USER results.json
           python3 .github/scripts/clean_zap_sarif.py
+
+      - name: Genera Report CSV
+        if: always()
+        run: |
+          if [ -f results.json ]; then
+            python3 -c "
+          import json, csv
+
+          with open('results.json', 'r') as f:
+              sarif = json.load(f)
+              
+          with open('zap-report.csv', 'w', newline='') as csv_file:
+              writer = csv.writer(csv_file)
+              writer.writerow(['Vulnerabilità', 'Livello', 'URI', 'Messaggio'])
+              
+              for run in sarif.get('runs', []):
+                  for res in run.get('results', []):
+                      rule_id = res.get('ruleId', 'Unknown')
+                      level = res.get('level', 'warning').upper()
+                      msg = res.get('message', {}).get('text', 'N/D')
+                      
+                      locs = res.get('locations', [{}])
+                      phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                      file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                      
+                      writer.writerow([rule_id, level, file_path, msg])
+          "
+            echo "Report CSV di ZAP generato con successo!"
+          else
+            echo "File results.json non trovato, salto la creazione del CSV."
+          fi
+
       - name: Upload dei risultati DAST su GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: results.json
           category: owasp-zap-dast
+
+      - name: Salva Report negli Artifatti
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-security-reports
+          path: |
+            results.json
+            zap-report.csv
+            zap-report.html
