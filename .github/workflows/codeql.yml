@@ -48,3 +48,60 @@ jobs:
 
       - name: Esegui l'Analisi CodeQL
         uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{matrix.language}}"
+          output: codeql-results
+
+      - name: Genera Report CSV
+        if: always()
+        run: |
+          SARIF_FILE="codeql-results/${{ matrix.language }}.sarif"
+          CSV_FILE="codeql-report-${{ matrix.language }}.csv"
+          
+          if [ -f "$SARIF_FILE" ]; then
+            python3 -c "
+          import json, csv
+          
+          with open('$SARIF_FILE', 'r') as f:
+              sarif = json.load(f)
+              
+          with open('$CSV_FILE', 'w', newline='') as csv_file:
+              writer = csv.writer(csv_file)
+              # Per CodeQL aggiungiamo anche il 'Dettaglio' perché fornisce spiegazioni utilissime!
+              writer.writerow(['Vulnerabilità', 'Gravità', 'File', 'Riga', 'Dettaglio'])
+              
+              for run in sarif.get('runs', []):
+                  # CodeQL mette la gravità nella definizione della regola, creiamo una mappa
+                  severity_map = {}
+                  for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
+                      rule_id = rule.get('id', 'Unknown')
+                      score = rule.get('properties', {}).get('security-severity')
+                      level = rule.get('defaultConfiguration', {}).get('level', 'warning').upper()
+                      severity_map[rule_id] = f'Score {score}' if score else level
+                      
+                  for res in run.get('results', []):
+                      rule_id = res.get('ruleId', 'Unknown')
+                      severity = severity_map.get(rule_id, 'WARNING')
+                      message = res.get('message', {}).get('text', 'N/D')
+                      
+                      locs = res.get('locations', [{}])
+                      phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                      file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                      line = phys_loc.get('region', {}).get('startLine', 'N/D')
+                      
+                      writer.writerow([rule_id, severity, file_path, line, message])
+          "
+            echo "Report CSV per ${{ matrix.language }} generato con successo!"
+          else
+            echo "Nessun file SARIF generato per ${{ matrix.language }}."
+          fi
+
+      # INTEGRAZIONE: Salva gli artifatti nominandoli in base al linguaggio
+      - name: Salva Report negli Artifatti
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-security-report-${{ matrix.language }}
+          path: |
+            codeql-results/${{ matrix.language }}.sarif
+            codeql-report-${{ matrix.language }}.csv
