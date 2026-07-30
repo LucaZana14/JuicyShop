@@ -14,13 +14,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: build dell'immagine docker con cache
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: .
           load: true
@@ -34,9 +34,9 @@ jobs:
           docker run -d --name juice-app -p 3000:3000 juicyshop:local
           echo "attendo che juice sia online"
           timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
-      - name:
-          Login e Setup Auth Token
-          #cambia l'url e le credenziali
+          
+      - name: Login e Setup Auth Token
+        #cambia l'url e le credenziali
         run: |
           echo "Eseguo il login come amministratore..."
           curl -s -X POST "http://localhost:3000/rest/user/login" \
@@ -50,7 +50,7 @@ jobs:
           echo "API_TOKEN=$TOKEN" >> $GITHUB_ENV
           echo "Token JWT ottenuto con successo!"
 
-        #cambia nome file yaml e vari urls, cambia anche localhost in openapi
+      #cambia nome file yaml e vari urls, cambia anche localhost in openapi
       - name: creazione e configurazione ZAP
         run: |
           cat << EOF > juice-shop-zap.yaml
@@ -67,7 +67,7 @@ jobs:
                 - description: Auth Token
                   matchType: req_header_str
                   matchString: Authorization
-                  replacementString: Bearer ${{ env.API_TOKEN }}
+                  replacementString: Bearer \$API_TOKEN
             
             - type: spider
               parameters:
@@ -90,7 +90,7 @@ jobs:
                 reportDir: /zap/wrk
                 reportFile: results.json
 
-            -type: report
+            - type: report
               parameters:
                 template: traditional-html-plus
                 reportDir: /zap/wrk
@@ -100,6 +100,7 @@ jobs:
       - name: Esegui scansione OWASP ZAP (Automation Framework)
         run: |
           docker run --user root --network host --shm-size=2g -v ${{ github.workspace }}:/zap/wrk/:rw -t zaproxy/zap-stable sh -c "Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & export DISPLAY=:99 && zap.sh -cmd -autorun /zap/wrk/juice-shop-zap.yaml"
+          
       - name: Adatta il SARIF per GitHub Code Scanning
         if: always()
         run: |
