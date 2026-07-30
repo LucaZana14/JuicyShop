@@ -29,8 +29,51 @@ jobs:
         run: semgrep scan --config="p/php" --sarif --output=semgrep.sarif
         continue-on-error: true
 
+      - name: Genera Report CSV
+        if: always()
+        run: |
+          if [ -f semgrep.sarif ]; then
+            python3 -c "
+          import json, csv
+
+          with open('semgrep.sarif', 'r') as f:
+              sarif = json.load(f)
+
+          with open('semgrep-report.csv', 'w', newline='') as csv_file:
+              writer = csv.writer(csv_file)
+              # Per Semgrep aggiungiamo il Messaggio, spesso contiene il suggerimento di fix!
+              writer.writerow(['Vulnerabilità', 'Gravità', 'File', 'Riga', 'Messaggio/Fix'])
+
+              for run in sarif.get('runs', []):
+                  for res in run.get('results', []):
+                      rule_id = res.get('ruleId', 'Unknown')
+                      level = res.get('level', 'warning').upper()
+                      message = res.get('message', {}).get('text', 'N/D')
+                      
+                      locs = res.get('locations', [{}])
+                      phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                      file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                      line = phys_loc.get('region', {}).get('startLine', 'N/D')
+                      
+                      # Scrive nel CSV mentre il file è aperto
+                      writer.writerow([rule_id, level, file_path, line, message])
+          "
+            echo "Report CSV di Semgrep generato con successo!"
+          else
+            echo "Nessun file SARIF generato da Semgrep."
+          fi
+
       - name: Carica i risultati su GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: semgrep.sarif
+
+      - name: Salva Report negli Artifatti
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-security-reports
+          path: |
+            semgrep.sarif
+            semgrep-report.csv

@@ -69,10 +69,10 @@ jobs:
           if [ -f results.sarif ]; then
             python3 -c "
           import json, csv
-          
+
           with open('results.sarif', 'r') as f:
               sarif = json.load(f)
-          
+
           with open('gitleaks-report.csv', 'w', newline='') as csv_file:
               writer = csv.writer(csv_file)
               writer.writerow(['Tipo di Segreto', 'Gravità', 'File', 'Riga'])

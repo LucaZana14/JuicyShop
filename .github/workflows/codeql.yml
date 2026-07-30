@@ -57,11 +57,11 @@ jobs:
         run: |
           SARIF_FILE="codeql-results/${{ matrix.language }}.sarif"
           CSV_FILE="codeql-report-${{ matrix.language }}.csv"
-          
+
           if [ -f "$SARIF_FILE" ]; then
             python3 -c "
           import json, csv
-          
+
           with open('$SARIF_FILE', 'r') as f:
               sarif = json.load(f)
               
