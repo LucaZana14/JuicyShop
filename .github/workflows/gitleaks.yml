@@ -68,7 +68,7 @@ jobs:
         run: |
           if [ -f results.sarif ]; then
             python3 -c "
-          import json
+          import json, csv
           with open('results.sarif', 'r') as f:
               sarif = json.load(f)
           
