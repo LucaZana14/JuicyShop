@@ -69,6 +69,7 @@ jobs:
           if [ -f results.sarif ]; then
             python3 -c "
           import json, csv
+          
           with open('results.sarif', 'r') as f:
               sarif = json.load(f)
           
@@ -76,26 +77,25 @@ jobs:
               writer = csv.writer(csv_file)
               writer.writerow(['Tipo di Segreto', 'Gravità', 'File', 'Riga'])
 
-          for run in sarif.get('runs', []):
-              for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
-                  # Inietta la severità Critical (9.0) specifica per le API di GitHub
-                  rule.setdefault('properties', {})['security-severity'] = '9.0'
-                  rule.setdefault('defaultConfiguration', {})['level'] = 'error'
-                  if rule.get('name', '').startswith('(?i)'):
-                      rule['name'] = 'Generic API Key or Secret'
-                      if 'shortDescription' in rule:
-                          rule['shortDescription']['text'] = 'Generic API Key or Secret'
-              for res in run.get('results', []):
-                  res['level'] = 'error'
-                  rule_id = res.get('ruleId', 'Unknown')
-                  locs = res.get('locations', [{}])
-                  phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
-                  file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
-                  line = phys_loc.get('region', {}).get('startLine', 'N/D')
-                  
-                  writer.writerow([rule_id, 'ERROR', file_path, line])
-
-          csv_file.close()
+              # NOTA I 4 SPAZI EXTRA QUI SOTTO: ora il ciclo è 'dentro' il file aperto
+              for run in sarif.get('runs', []):
+                  for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
+                      rule.setdefault('properties', {})['security-severity'] = '9.0'
+                      rule.setdefault('defaultConfiguration', {})['level'] = 'error'
+                      if rule.get('name', '').startswith('(?i)'):
+                          rule['name'] = 'Generic API Key or Secret'
+                          if 'shortDescription' in rule:
+                              rule['shortDescription']['text'] = 'Generic API Key or Secret'
+                              
+                  for res in run.get('results', []):
+                      res['level'] = 'error'
+                      rule_id = res.get('ruleId', 'Unknown')
+                      locs = res.get('locations', [{}])
+                      phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                      file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                      line = phys_loc.get('region', {}).get('startLine', 'N/D')
+                      
+                      writer.writerow([rule_id, 'ERROR', file_path, line])
 
           with open('results.sarif', 'w') as f:
               json.dump(sarif, f, indent=2)
