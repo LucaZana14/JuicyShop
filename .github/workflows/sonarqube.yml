@@ -59,8 +59,58 @@ jobs:
         run: |
           python3 .github/scripts/sonar_to_sarif.py
 
+          - name: Genera Report CSV
+          if: always()
+          run: |
+            if [ -f sonarcloud.sarif ]; then
+              python3 -c "
+            import json, csv
+            
+            with open('sonarcloud.sarif', 'r') as f:
+                sarif = json.load(f)
+                
+            with open('sonarcloud-report.csv', 'w', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                # Intestazione personalizzata per i dati di SonarQube
+                writer.writerow(['Regola', 'Tipo Sonar', 'Livello', 'File', 'Riga', 'Messaggio'])
+                
+                for run in sarif.get('runs', []):
+                    # Mappiamo le regole per recuperare il 'sonar-type' che hai iniettato nello script
+                    rule_map = {}
+                    for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
+                        rule_id = rule.get('id', 'unknown')
+                        sonar_type = rule.get('properties', {}).get('sonar-type', 'UNKNOWN')
+                        rule_map[rule_id] = sonar_type
+  
+                    for res in run.get('results', []):
+                        rule_id = res.get('ruleId', 'Unknown')
+                        level = res.get('level', 'warning').upper()
+                        msg = res.get('message', {}).get('text', 'N/D')
+                        s_type = rule_map.get(rule_id, 'UNKNOWN')
+                        
+                        locs = res.get('locations', [{}])
+                        phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                        file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                        line = phys_loc.get('region', {}).get('startLine', 'N/D')
+                        
+                        writer.writerow([rule_id, s_type, level, file_path, line, msg])
+            "
+              echo "Report CSV di SonarQube generato con successo!"
+            else
+              echo "Nessun file SARIF generato, salto la creazione del CSV."
+            fi
+
       - name: Carica i risultati su GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: sonarcloud.sarif
+
+      - name: Salva Report negli Artifatti
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonarqube-security-reports
+          path: |
+            sonarcloud.sarif
+            sonarcloud-report.csv
