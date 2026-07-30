@@ -72,7 +72,7 @@ jobs:
           import json
           with open('results.sarif', 'r') as f:
               sarif = json.load(f)
-          
+
           for run in sarif.get('runs', []):
               # 1. Aggiorna le Regole (da qui GitHub legge la gravità reale)
               for rule in run.get('tool', {}).get('driver', {}).get('rules', []):

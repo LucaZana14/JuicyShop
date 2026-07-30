@@ -2,9 +2,9 @@ name: Master Security Pipeline
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
 
 permissions:
   contents: read
@@ -19,13 +19,13 @@ concurrency:
 jobs:
   gitleaks:
     name: run gitLeaks
-    uses: ./.github/workflows/gitleaks.yml 
+    uses: ./.github/workflows/gitleaks.yml
     secrets: inherit
 
   codeql:
     name: run CodeQL
     needs: [gitleaks]
-    uses: ./.github/workflows/codeql.yml 
+    uses: ./.github/workflows/codeql.yml
   sonarqube:
     name: run sonarqube
     needs: [gitleaks]
@@ -44,7 +44,7 @@ jobs:
   checkov:
     name: run checkov
     needs: [gitleaks]
-    uses: ./.github/workflows/checkov.yml 
+    uses: ./.github/workflows/checkov.yml
 
   trivy:
     name: run trivy
@@ -58,4 +58,4 @@ jobs:
     name: run ZAP
     # needs: [codeql, sonarqube, semgrep, checkov, trivy]
     # per ora commento i needs per una questione di velocità ma poi andranno riavviati
-    uses: ./.github/workflows/zap_dast.yml 
+    uses: ./.github/workflows/zap_dast.yml

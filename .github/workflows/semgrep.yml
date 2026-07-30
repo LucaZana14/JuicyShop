@@ -7,7 +7,7 @@ jobs:
   semgrep:
     name: Run Semgrep (PHP/Symfony)
     runs-on: ubuntu-latest
-    
+
     # Permessi minimi richiesti
     permissions:
       contents: read
@@ -15,12 +15,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7 
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v7  
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Installa Semgrep CLI
         run: pip install semgrep

@@ -27,14 +27,15 @@ jobs:
           tags: juicyshop:local
           cache-from: type=gha
           cache-to: type=gha, mode=max
-        
+
       # cambia localhost e nome
       - name: Avvio immagine
         run: |
           docker run -d --name juice-app -p 3000:3000 juicyshop:local
           echo "attendo che juice sia online"
           timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 5; done'
-      - name: Login e Setup Auth Token
+      - name:
+          Login e Setup Auth Token
           #cambia l'url e le credenziali
         run: |
           echo "Eseguo il login come amministratore..."

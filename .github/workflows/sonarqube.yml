@@ -8,7 +8,7 @@ on:
         description: "Organization SonarCloud"
         required: true
         type: string
-      sonar_project_key: 
+      sonar_project_key:
         description: "Project key su SonarCloud"
         required: true
         type: string
