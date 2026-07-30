@@ -36,6 +36,38 @@ jobs:
           output_file_path: console,results.sarif
           soft_fail: true
 
+      - name: Genera Report CSV
+        if: always()
+        run: |
+          if [ -f results.sarif ]; then
+            python3 -c "
+          import json, csv
+
+          with open('results.sarif', 'r') as f:
+              sarif = json.load(f)
+              
+          with open('checkov-report.csv', 'w', newline='') as csv_file:
+              writer = csv.writer(csv_file)
+              writer.writerow(['Regola', 'Livello', 'File', 'Riga', 'Messaggio/Fix'])
+              
+              for run in sarif.get('runs', []):
+                  for res in run.get('results', []):
+                      rule_id = res.get('ruleId', 'Unknown')
+                      level = res.get('level', 'warning').upper()
+                      msg = res.get('message', {}).get('text', 'N/D')
+                      
+                      locs = res.get('locations', [{}])
+                      phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                      file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                      line = phys_loc.get('region', {}).get('startLine', 'N/D')
+                      
+                      writer.writerow([rule_id, level, file_path, line, msg])
+          "
+            echo "Report CSV di Checkov generato con successo!"
+          else
+            echo "Nessun file SARIF generato da Checkov, salto la creazione del CSV."
+          fi
+
       - name: Carica i risultati su GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always() # Esegue l'upload anche se Checkov trova degli errori
@@ -43,3 +75,12 @@ jobs:
           sarif_file: results.sarif
           category: checkov-iac
           wait-for-processing: true
+
+      - name: Salva Report negli Artifatti
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-security-reports
+          path: |
+            results.sarif
+            checkov-report.csv
