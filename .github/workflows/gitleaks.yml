@@ -71,6 +71,10 @@ jobs:
           import json
           with open('results.sarif', 'r') as f:
               sarif = json.load(f)
+          
+          with open('gitleaks-report.csv', 'w', newline='') as csv_file:
+              writer = csv.writer(csv_file)
+              writer.writerow(['Tipo di Segreto', 'Gravità', 'File', 'Riga'])
 
           for run in sarif.get('runs', []):
               for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
@@ -90,8 +94,6 @@ jobs:
                   line = phys_loc.get('region', {}).get('startLine', 'N/D')
                   
                   writer.writerow([rule_id, 'ERROR', file_path, line])
-
-          csv_file.close()
 
           with open('results.sarif', 'w') as f:
               json.dump(sarif, f, indent=2)
