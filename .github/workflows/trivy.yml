@@ -83,6 +83,36 @@ jobs:
           format: "cyclonedx"
           output: "bom.json"
 
+      - name: Genera Report CSV dai SARIF
+        if: always()
+        run: |
+          python3 -c "
+          import json, csv, glob
+
+          sarif_files = glob.glob('trivy-results*.sarif')
+          for s_file in sarif_files:
+              csv_file = s_file.replace('.sarif', '.csv')
+              with open(s_file, 'r') as f:
+                  sarif = json.load(f)
+              
+              with open(csv_file, 'w', newline='') as c_file:
+                  writer = csv.writer(c_file)
+                  writer.writerow(['CVE/Regola', 'Livello', 'Target/File', 'Riga', 'Messaggio'])
+                  
+                  for run in sarif.get('runs', []):
+                      for res in run.get('results', []):
+                          rule_id = res.get('ruleId', 'Unknown')
+                          level = res.get('level', 'warning').upper()
+                          msg = res.get('message', {}).get('text', 'N/D')
+                          
+                          locs = res.get('locations', [{}])
+                          phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                          file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                          line = phys_loc.get('region', {}).get('startLine', 'N/D')
+                          
+                          writer.writerow([rule_id, level, file_path, line, msg])
+              print(f'CSV generato per {s_file} -> {csv_file}')
+          "
       - name: Carica SARIF su GitHub
         uses: github/codeql-action/upload-sarif@v4
         if: always()
@@ -111,6 +141,9 @@ jobs:
         if: ${{ inputs.generate_sbom }}
         uses: actions/upload-artifact@v7
         with:
-          name: sbom-cyclonedx
-          path: bom.json
+          name: trivy-security-reports
+          path: |
+            trivy-results*.sarif
+            trivy-results*.csv
+            bom.json
           retention-days: 14
