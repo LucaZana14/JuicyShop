@@ -53,7 +53,7 @@ jobs:
         #cambia nome file yaml e vari urls, cambia anche localhost in openapi
       - name: creazione e configurazione ZAP
         run: |
-          cat << 'EOF' > juice-shop-zap.yaml
+          cat << EOF > juice-shop-zap.yaml
           env:
             contexts:
               - name: JuiceShop-context
@@ -74,9 +74,9 @@ jobs:
                 maxDuration: 2
               
             #- type: openapi
-             # parameters:
-              #  apiFile: /zap/wrk/openapi/vAPI.yaml  #Se vuoi cercare il file direttamente da github
-             #   targetUrl: http://localhost:8081   #se vuoi vederlo a macchina avviata da docker
+            #  parameters:
+            #    apiFile: /zap/wrk/openapi/vAPI.yaml  #Se vuoi cercare il file direttamente da github
+            #    targetUrl: http://localhost:8081   #se vuoi vederlo a macchina avviata da docker
             
             - type: passiveScan-config
 
@@ -103,8 +103,12 @@ jobs:
       - name: Adatta il SARIF per GitHub Code Scanning
         if: always()
         run: |
-          sudo chown -R $USER:$USER results.json
-          python3 .github/scripts/clean_zap_sarif.py
+          if [ -f results.json ]; then
+            sudo chown -R $USER:$USER results.json
+            python3 .github/scripts/clean_zap_sarif.py
+          else
+            echo "Attenzione: File results.json non trovato! ZAP potrebbe essere crashato."
+          fi
 
       - name: Genera Report CSV
         if: always()
