@@ -81,7 +81,7 @@ jobs:
                         rule_id = rule.get('id', 'unknown')
                         sonar_type = rule.get('properties', {}).get('sonar-type', 'UNKNOWN')
                         rule_map[rule_id] = sonar_type
-  
+
                     for res in run.get('results', []):
                         rule_id = res.get('ruleId', 'Unknown')
                         level = res.get('level', 'warning').upper()
