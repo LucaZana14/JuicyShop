@@ -56,7 +56,6 @@ jobs:
 
       - name: Esegui Gitleaks su tutta la repo
         run: |
-          # Rimossa la flag --redact per non far accorpare gli alert a GitHub
           gitleaks detect \
             --source . \
             --report-format sarif \
@@ -64,7 +63,7 @@ jobs:
             --exit-code 0 \
             --verbose
 
-      - name: Pulisci e Potenzia il SARIF (Fix Titoli e Gravità)
+      - name: Pulisci e Potenzia il SARIF e genera Report CSV
         if: always()
         run: |
           if [ -f results.sarif ]; then
@@ -74,22 +73,26 @@ jobs:
               sarif = json.load(f)
 
           for run in sarif.get('runs', []):
-              # 1. Aggiorna le Regole (da qui GitHub legge la gravità reale)
               for rule in run.get('tool', {}).get('driver', {}).get('rules', []):
                   # Inietta la severità Critical (9.0) specifica per le API di GitHub
                   rule.setdefault('properties', {})['security-severity'] = '9.0'
                   rule.setdefault('defaultConfiguration', {})['level'] = 'error'
-                  
-                  # Rinomina la bruttissima Regex in un titolo leggibile
                   if rule.get('name', '').startswith('(?i)'):
                       rule['name'] = 'Generic API Key or Secret'
                       if 'shortDescription' in rule:
                           rule['shortDescription']['text'] = 'Generic API Key or Secret'
-                          
-              # 2. Aggiorna ogni singolo risultato trovato
               for res in run.get('results', []):
                   res['level'] = 'error'
+                  rule_id = res.get('ruleId', 'Unknown')
+                  locs = res.get('locations', [{}])
+                  phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                  file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                  line = phys_loc.get('region', {}).get('startLine', 'N/D')
                   
+                  writer.writerow([rule_id, 'ERROR', file_path, line])
+
+          csv_file.close()
+
           with open('results.sarif', 'w') as f:
               json.dump(sarif, f, indent=2)
           "
@@ -101,3 +104,12 @@ jobs:
         with:
           sarif_file: results.sarif
           category: ${{ inputs.sarif_category }}
+
+      - name: Salva Report negli Artifatti
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-security-reports
+          path: |
+            results.sarif
+            gitleaks-report.csv
