@@ -64,6 +64,12 @@ jobs:
     # per ora commento i needs per una questione di velocità ma poi andranno riavviati
     uses: ./.github/workflows/zap_dast.yml
 
+  nuclei:
+    name: run nuclei
+    #needs: [codeql, sonarqube, semgrep, checkov, trivy]
+    # per ora commento i needs per una questione di velocità ma poi andranno riavviati
+    uses: ./.github/workflows/nuclei.yml
+
   upload_to_defectdojo:
     name: Centralizza su DefectDojo
     # Inserisci qui dentro TUTTI i nomi dei job di scansione che hai nel file master
