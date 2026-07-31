@@ -107,7 +107,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
-          sarif_file: nuclei-results.sarif
+          sarif_file: trufflehog-results.sarif
 
       - name: Salva Report negli Artifatti
         if: always()
