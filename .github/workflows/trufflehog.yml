@@ -9,49 +9,105 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del codice
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 
         with:
-          # fetch-depth: 0 è obbligatorio per analizzare tutta la history dei commit
           fetch-depth: 0
-          
-      - name: Installazione ed Esecuzione TruffleHog (SARIF)
+
+      - name: Installazione ed Esecuzione TruffleHog
         run: |
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-          
-          echo "Avvio scansione TruffleHog in formato SARIF..."
-          # Usiamo il flag --sarif per esportare nel formato standard
-          trufflehog filesystem ./ --sarif > trufflehog-results.sarif || true
 
-      - name: Genera Report CSV
+          echo "Avvio scansione TruffleHog..."
+          trufflehog filesystem ./ --json > trufflehog-results.json || true
+
+      - name: Genera Report CSV e SARIF
         if: always()
         run: |
-          if [ -f trufflehog-results.sarif ]; then
+          if [ -s trufflehog-results.json ]; then
             python3 -c "
           import json, csv
 
-          with open('trufflehog-results.sarif', 'r') as f:
-              sarif = json.load(f)
+          findings = []
+          with open('trufflehog-results.json', 'r') as f:
+              for line in f:
+                  line = line.strip()
+                  if line:
+                      try:
+                          findings.append(json.loads(line))
+                      except:
+                          pass
 
+          # 1. Generazione CSV
           with open('trufflehog-report.csv', 'w', newline='') as csv_file:
               writer = csv.writer(csv_file)
-              writer.writerow(['Vulnerabilità/Secret', 'Gravità', 'File', 'Messaggio'])
+              writer.writerow(['Detector/Secret', 'Verificato (Attivo)', 'File', 'Valore Oscurato'])
 
-              for run in sarif.get('runs', []):
-                  for res in run.get('results', []):
-                      rule_id = res.get('ruleId', 'Unknown')
-                      level = res.get('level', 'warning').upper()
-                      message = res.get('message', {}).get('text', 'N/D')
-                      
-                      locs = res.get('locations', [{}])
-                      phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
-                      file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
-                      
-                      writer.writerow([rule_id, level, file_path, message])
+              for res in findings:
+                  detector = res.get('DetectorName', 'Unknown')
+                  verified = 'SÌ (CRITICO)' if res.get('Verified') else 'No (Unverified)'
+                  meta = res.get('SourceMetadata', {}).get('Data', {})
+                  file_path = meta.get('Filesystem', {}).get('file', 'Sconosciuto')
+                  redacted = res.get('Redacted', 'N/D')
+                  writer.writerow([detector, verified, file_path, redacted])
+
+          # 2. Generazione SARIF compatibile con GitHub/DefectDojo
+          sarif_data = {
+              'version': '2.1.0',
+              'runs': [{
+                  'tool': {
+                      'driver': {
+                          'name': 'TruffleHog',
+                          'rules': []
+                      }
+                  },
+                  'results': []
+              }]
+          }
+
+          rules_added = set()
+          for i, res in enumerate(findings):
+              detector = res.get('DetectorName', 'Unknown')
+              verified = res.get('Verified', False)
+              meta = res.get('SourceMetadata', {}).get('Data', {})
+              file_path = meta.get('Filesystem', {}).get('file', 'Sconosciuto')
+              
+              if detector not in rules_added:
+                  sarif_data['runs'][0]['tool']['driver']['rules'].append({
+                      'id': detector,
+                      'shortDescription': {'text': f'Secret detected: {detector}'}
+                  })
+                  rules_added.add(detector)
+
+              sarif_data['runs'][0]['results'].append({
+                  'ruleId': detector,
+                  'level': 'error' if verified else 'warning',
+                  'message': {'text': f'TruffleHog found {detector} in {file_path}. Verified active: {verified}'},
+                  'locations': [{
+                      'physicalLocation': {
+                          'artifactLocation': {'uri': file_path},
+                          'region': {'startLine': 1}
+                      }
+                  }]
+              })
+
+          with open('trufflehog-results.sarif', 'w') as sarif_file:
+              json.dump(sarif_data, sarif_file, indent=2)
+
+          print('Conversione completata con successo!')
           "
-            echo "Report CSV di TruffleHog generato con successo!"
+            echo "Report CSV e SARIF di TruffleHog generati con successo!"
           else
-            echo "Nessun file SARIF generato da TruffleHog."
+            echo "Il file dei risultati è vuoto o non esiste."
+            # Crea un SARIF vuoto ma valido per evitare errori nella pipeline
+            echo '{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "TruffleHog", "rules": []}}, "results": []}]}' > trufflehog-results.sarif
+            touch trufflehog-report.csv
           fi
+
+      - name: Carica i risultati su GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: nuclei-results.sarif
 
       - name: Salva Report negli Artifatti
         if: always()
