@@ -9,60 +9,55 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout del codice
-        uses: actions/checkout@v7 
+        uses: actions/checkout@v7
         with:
+          # fetch-depth: 0 è obbligatorio per analizzare tutta la history dei commit
           fetch-depth: 0
-
-      - name: Installazione ed Esecuzione TruffleHog
+          
+      - name: Installazione ed Esecuzione TruffleHog (SARIF)
         run: |
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-          echo "Avvio scansione TruffleHog..."
-          trufflehog filesystem ./ --json > trufflehog-results.json || true
+          
+          echo "Avvio scansione TruffleHog in formato SARIF..."
+          # Usiamo il flag --sarif per esportare nel formato standard
+          trufflehog filesystem ./ --sarif > trufflehog-results.sarif || true
 
-      # GENERAZIONE CSV DEDICATA A TRUFFLEHOG
       - name: Genera Report CSV
         if: always()
         run: |
-          if [ -f trufflehog-results.json ]; then
+          if [ -f trufflehog-results.sarif ]; then
             python3 -c "
           import json, csv
 
-          findings = []
-          with open('trufflehog-results.json', 'r') as f:
-              for line in f:
-                  line = line.strip()
-                  if line:
-                      try:
-                          findings.append(json.loads(line))
-                      except:
-                          pass
+          with open('trufflehog-results.sarif', 'r') as f:
+              sarif = json.load(f)
 
           with open('trufflehog-report.csv', 'w', newline='') as csv_file:
               writer = csv.writer(csv_file)
-              writer.writerow(['Detector/Secret', 'Verificato (Attivo)', 'File', 'Valore Oscurato'])
+              writer.writerow(['Vulnerabilità/Secret', 'Gravità', 'File', 'Messaggio'])
 
-              for res in findings:
-                  detector = res.get('DetectorName', 'Unknown')
-                  verified = 'SÌ (CRITICO)' if res.get('Verified') else 'No (Unverified)'
-                  
-                  # Estrazione del file sorgente dai metadati del filesystem
-                  meta = res.get('SourceMetadata', {}).get('Data', {})
-                  file_path = meta.get('Filesystem', {}).get('file', 'Sconosciuto')
-                  redacted = res.get('Redacted', 'N/D')
-                  
-                  writer.writerow([detector, verified, file_path, redacted])
+              for run in sarif.get('runs', []):
+                  for res in run.get('results', []):
+                      rule_id = res.get('ruleId', 'Unknown')
+                      level = res.get('level', 'warning').upper()
+                      message = res.get('message', {}).get('text', 'N/D')
+                      
+                      locs = res.get('locations', [{}])
+                      phys_loc = locs[0].get('physicalLocation', {}) if locs else {}
+                      file_path = phys_loc.get('artifactLocation', {}).get('uri', 'Sconosciuto')
+                      
+                      writer.writerow([rule_id, level, file_path, message])
           "
             echo "Report CSV di TruffleHog generato con successo!"
           else
-            echo "Nessun file JSON generato da TruffleHog."
+            echo "Nessun file SARIF generato da TruffleHog."
           fi
 
-      # SALVATAGGIO ARTIFATTI STANDARD
       - name: Salva Report negli Artifatti
         if: always()
         uses: actions/upload-artifact@v7 
         with:
           name: trufflehog-security-reports
           path: |
-            trufflehog-results.json
+            trufflehog-results.sarif
             trufflehog-report.csv

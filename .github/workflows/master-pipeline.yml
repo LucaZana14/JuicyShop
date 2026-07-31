@@ -28,11 +28,11 @@ jobs:
 
   codeql:
     name: run CodeQL
-    needs: [gitleaks]
+    needs: [gitleaks, trufflehog]
     uses: ./.github/workflows/codeql.yml
   sonarqube:
     name: run sonarqube
-    needs: [gitleaks]
+    needs: [gitleaks, trufflehog]
     uses: ./.github/workflows/sonarqube.yml
     with:
       #modificare l'organization
@@ -42,17 +42,17 @@ jobs:
     secrets: inherit
   semgrep:
     name: run semgrep
-    needs: [gitleaks]
+    needs: [gitleaks, trufflehog]
     uses: ./.github/workflows/semgrep.yml
 
   checkov:
     name: run checkov
-    needs: [gitleaks]
+    needs: [gitleaks, trufflehog]
     uses: ./.github/workflows/checkov.yml
 
   trivy:
     name: run trivy
-    needs: [gitleaks]
+    needs: [gitleaks, trufflehog]
     uses: ./.github/workflows/trivy.yml
     with:
       image_name: "juicyshop"
@@ -73,7 +73,7 @@ jobs:
   upload_to_defectdojo:
     name: Centralizza su DefectDojo
     # Inserisci qui dentro TUTTI i nomi dei job di scansione che hai nel file master
-    needs: [gitleaks, codeql, semgrep, sonarqube, checkov, trivy, zap]
+    needs: [gitleaks, trufflehog, codeql, semgrep, sonarqube, checkov, trivy, zap, nuclei]
     if: always() # Lo esegue sempre, anche se i tool precedenti hanno trovato vulnerabilità
     uses: ./.github/workflows/defect-dojo-upload.yml # Assicurati che il percorso sia corretto
     with:
