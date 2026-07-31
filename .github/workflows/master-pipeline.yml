@@ -59,3 +59,17 @@ jobs:
     # needs: [codeql, sonarqube, semgrep, checkov, trivy]
     # per ora commento i needs per una questione di velocità ma poi andranno riavviati
     uses: ./.github/workflows/zap_dast.yml
+
+
+  upload_to_defectdojo:
+    name: Centralizza su DefectDojo
+    # Inserisci qui dentro TUTTI i nomi dei job di scansione che hai nel file master
+    needs: [gitleaks, codeql, semgrep, sonarqube, checkov, trivy, zap] 
+    if: always() # Lo esegue sempre, anche se i tool precedenti hanno trovato vulnerabilità
+    uses: ./.github/workflows/defect-dojo-upload.yml  # Assicurati che il percorso sia corretto
+    with:
+      # INSERISCI QUI IL TUO URL NGROK (Ricorda di aggiornarlo se riavvii ngrok!)
+      dojo_url: " https://bok-pasted-proud.ngrok-free.dev"
+      product_name: "JuiceShop"
+    secrets:
+      DOJO_TOKEN: ${{ secrets.DOJO_TOKEN }}

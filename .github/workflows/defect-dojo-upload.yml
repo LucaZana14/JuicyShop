@@ -1,0 +1,59 @@
+name: "Upload to DefectDojo"
+
+on:
+  workflow_call:
+    inputs:
+      dojo_url:
+        description: "URL dell'istanza DefectDojo (es. fornito da ngrok)"
+        required: true
+        type: string
+      product_name:
+        description: "Nome del prodotto su DefectDojo"
+        required: false
+        type: string
+        default: "JuiceShop"
+    secrets:
+      DOJO_TOKEN:
+        required: true
+
+jobs:
+  upload-dojo:
+    name: Invia report a DefectDojo
+    runs-on: ubuntu-latest
+
+    steps:
+      # Il merge-multiple: true unisce tutti i file nella stessa cartella 'security-reports'
+      - name: Scarica tutti i report di sicurezza
+        uses: actions/download-artifact@v8 
+        with:
+          path: security-reports
+          merge-multiple: true
+
+      - name: Upload dei file SARIF a DefectDojo
+        env:
+          DOJO_URL: ${{ inputs.dojo_url }}
+          DOJO_TOKEN: ${{ secrets.DOJO_TOKEN }}
+          PRODUCT_NAME: ${{ inputs.product_name }}
+        run: |
+          echo "Inizio caricamento su DefectDojo ($DOJO_URL)..."
+          
+          # Trova tutti i file .sarif (Trivy, CodeQL, Semgrep, Checkov, Sonar) e il results.json (ZAP)
+          find security-reports -type f \( -name "*.sarif" -o -name "results.json" \) | while read file; do
+            echo "Sto caricando il report: $file"
+            
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$DOJO_URL/api/v2/import-scan/" \
+              -H "Authorization: Token $DOJO_TOKEN" \
+              -F "scan_type=SARIF" \
+              -F "file=@$file" \
+              -F "product_name=$PRODUCT_NAME" \
+              -F "engagement_name=Automated CI/CD Scans" \
+              -F "auto_create_context=true" \
+              -F "close_old_findings=true" \
+              -F "deduplication_on_engagement=true")
+              
+            if [ "$HTTP_STATUS" -eq 201 ] || [ "$HTTP_STATUS" -eq 200 ]; then
+              echo "✅ Successo! Il file $file è stato elaborato da DefectDojo."
+            else
+              echo "❌ Errore durante il caricamento di $file (HTTP Status: $HTTP_STATUS)"
+            fi
+          done
