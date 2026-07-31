@@ -40,9 +40,15 @@ jobs:
           find security-reports -type f \( -name "*.sarif" -o -name "results.json" \) | while read file; do
             echo "Sto caricando il report: $file"
             
-            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X POST "$DOJO_URL/api/v2/import-scan/" \
+            # Estraiamo il nome del file per usarlo come titolo del test (es. "trivy-results.sarif")
+            TEST_TITLE=$(basename "$file")
+            
+            # ATTENZIONE: Abbiamo cambiato l'endpoint in /api/v2/reimport-scan/
+            # e aggiunto il campo test_title=$TEST_TITLE
+            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X POST "$DOJO_URL/api/v2/reimport-scan/" \
               -H "Authorization: Token $DOJO_TOKEN" \
               -F "scan_type=SARIF" \
+              -F "test_title=$TEST_TITLE" \
               -F "file=@$file" \
               -F "product_name=$PRODUCT_NAME" \
               -F "product_type_name=Research and Development" \
@@ -52,10 +58,10 @@ jobs:
               -F "deduplication_on_engagement=true")
               
             if [ "$HTTP_STATUS" -eq 201 ] || [ "$HTTP_STATUS" -eq 200 ]; then
-              echo "Successo! Il file $file è stato elaborato da DefectDojo."
+              echo "✅ Successo! Il file $file ha AGGIORNATO la scansione su DefectDojo."
             else
-              echo "Errore durante il caricamento di $file (HTTP Status: $HTTP_STATUS)"
-              echo "Dettaglio Errore API:"
+              echo "❌ Errore durante il caricamento di $file (HTTP Status: $HTTP_STATUS)"
+              echo "🔍 Dettaglio Errore API:"
               cat response.json
               echo ""
             fi
