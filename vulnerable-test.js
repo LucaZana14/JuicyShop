@@ -10,12 +10,6 @@ const app = express();
 const db = new sqlite3.Database(':memory:');
 
 // ==========================================
-// 1. HARDCODED SECRETS (Test per TruffleHog)
-// ==========================================
-const JWT_SECRET_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fakedata";
-
-
-// ==========================================
 // 2. SQL INJECTION (Test per Semgrep / CodeQL)
 // ==========================================
 app.get('/api/test/sql-injection', (req, res) => {
