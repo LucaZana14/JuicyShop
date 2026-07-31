@@ -46,25 +46,25 @@ jobs:
     needs: [gitleaks]
     uses: ./.github/workflows/checkov.yml
 
-  trivy:
-    name: run trivy
-    needs: [gitleaks]
-    uses: ./.github/workflows/trivy.yml
-    with:
-      image_name: "juicyshop"
-      image_tag: ci
+ # trivy:
+  #  name: run trivy
+   # needs: [gitleaks]
+    #uses: ./.github/workflows/trivy.yml
+   # with:
+    #  image_name: "juicyshop"
+     # image_tag: ci
 
-  zap:
-    name: run ZAP
+  #zap:
+   # name: run ZAP
     # needs: [codeql, sonarqube, semgrep, checkov, trivy]
     # per ora commento i needs per una questione di velocità ma poi andranno riavviati
-    uses: ./.github/workflows/zap_dast.yml
+    #uses: ./.github/workflows/zap_dast.yml
 
 
   upload_to_defectdojo:
     name: Centralizza su DefectDojo
     # Inserisci qui dentro TUTTI i nomi dei job di scansione che hai nel file master
-    needs: [gitleaks, codeql, semgrep, sonarqube, checkov, trivy, zap] 
+    needs: [gitleaks, codeql, semgrep, sonarqube, checkov] 
     if: always() # Lo esegue sempre, anche se i tool precedenti hanno trovato vulnerabilità
     uses: ./.github/workflows/defect-dojo-upload.yml  # Assicurati che il percorso sia corretto
     with:

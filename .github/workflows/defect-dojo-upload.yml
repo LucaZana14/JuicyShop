@@ -41,19 +41,22 @@ jobs:
           find security-reports -type f \( -name "*.sarif" -o -name "results.json" \) | while read file; do
             echo "Sto caricando il report: $file"
             
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$DOJO_URL/api/v2/import-scan/" \
+            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X POST "$DOJO_URL/api/v2/import-scan/" \
               -H "Authorization: Token $DOJO_TOKEN" \
               -F "scan_type=SARIF" \
               -F "file=@$file" \
               -F "product_name=$PRODUCT_NAME" \
+              -F "product_type_name=Research and Development"
               -F "engagement_name=Automated CI/CD Scans" \
               -F "auto_create_context=true" \
               -F "close_old_findings=true" \
               -F "deduplication_on_engagement=true")
               
             if [ "$HTTP_STATUS" -eq 201 ] || [ "$HTTP_STATUS" -eq 200 ]; then
-              echo "✅ Successo! Il file $file è stato elaborato da DefectDojo."
+              echo "Successo! Il file $file è stato elaborato da DefectDojo."
             else
-              echo "❌ Errore durante il caricamento di $file (HTTP Status: $HTTP_STATUS)"
+              echo "Errore durante il caricamento di $file (HTTP Status: $HTTP_STATUS)"
+              echo "dettagli errore API:"
+              cat response.json
             fi
           done
