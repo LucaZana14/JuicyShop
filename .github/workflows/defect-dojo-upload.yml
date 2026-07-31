@@ -37,7 +37,6 @@ jobs:
         run: |
           echo "Inizio caricamento su DefectDojo ($DOJO_URL)..."
           
-          # Trova tutti i file .sarif (Trivy, CodeQL, Semgrep, Checkov, Sonar) e il results.json (ZAP)
           find security-reports -type f \( -name "*.sarif" -o -name "results.json" \) | while read file; do
             echo "Sto caricando il report: $file"
             
@@ -46,7 +45,7 @@ jobs:
               -F "scan_type=SARIF" \
               -F "file=@$file" \
               -F "product_name=$PRODUCT_NAME" \
-              -F "product_type_name=Research and Development"
+              -F "product_type_name=Research and Development" \
               -F "engagement_name=Automated CI/CD Scans" \
               -F "auto_create_context=true" \
               -F "close_old_findings=true" \
@@ -56,7 +55,8 @@ jobs:
               echo "Successo! Il file $file è stato elaborato da DefectDojo."
             else
               echo "Errore durante il caricamento di $file (HTTP Status: $HTTP_STATUS)"
-              echo "dettagli errore API:"
+              echo "Dettaglio Errore API:"
               cat response.json
+              echo ""
             fi
           done
