@@ -26,6 +26,7 @@ jobs:
         uses: projectdiscovery/nuclei-action@v3
         with:
           version: "latest"
+          cache: true
           args: "-u http://localhost:3000 -sarif-export nuclei-results.sarif"
         continue-on-error: true
 
