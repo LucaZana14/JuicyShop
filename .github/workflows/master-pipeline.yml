@@ -22,6 +22,10 @@ jobs:
     uses: ./.github/workflows/gitleaks.yml
     secrets: inherit
 
+  trufflehog:
+    name: run trufflehog
+    uses: ./.github/workflows/trufflehog.yml 
+
   codeql:
     name: run CodeQL
     needs: [gitleaks]
