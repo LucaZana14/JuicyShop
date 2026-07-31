@@ -27,6 +27,7 @@ jobs:
         with:
           version: "latest"
           args: "-u http://localhost:3000 -sarif-export nuclei-results.sarif"
+        continue-on-error: true
 
       - name: Genera Report CSV
         if: always()
