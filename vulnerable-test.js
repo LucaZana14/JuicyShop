@@ -12,7 +12,6 @@ const db = new sqlite3.Database(':memory:');
 // ==========================================
 // 1. HARDCODED SECRETS (Test per TruffleHog)
 // ==========================================
-const STRIPE_API_KEY = "sk_live_501nD4ng3r0u5K3yF4k3ForTestPurposes12345";
 const JWT_SECRET_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fakedata";
 
 
