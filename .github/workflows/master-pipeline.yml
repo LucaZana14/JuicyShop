@@ -26,13 +26,18 @@ jobs:
     name: run trufflehog
     uses: ./.github/workflows/trufflehog.yml 
 
+  spectral:
+    name: run spectral
+    uses: ./.github/workflows/spectral.yml 
+  
+
   codeql:
     name: run CodeQL
-    needs: [gitleaks, trufflehog]
+    needs: [gitleaks, trufflehog, spectral]
     uses: ./.github/workflows/codeql.yml
   sonarqube:
     name: run sonarqube
-    needs: [gitleaks, trufflehog]
+    needs: [gitleaks, trufflehog, spectral]
     uses: ./.github/workflows/sonarqube.yml
     with:
       #modificare l'organization
@@ -42,17 +47,17 @@ jobs:
     secrets: inherit
   semgrep:
     name: run semgrep
-    needs: [gitleaks, trufflehog]
+    needs: [gitleaks, trufflehog, spectral]
     uses: ./.github/workflows/semgrep.yml
 
   checkov:
     name: run checkov
-    needs: [gitleaks, trufflehog]
+    needs: [gitleaks, trufflehog, spectral]
     uses: ./.github/workflows/checkov.yml
 
   trivy:
     name: run trivy
-    needs: [gitleaks, trufflehog]
+    needs: [gitleaks, trufflehog, spectral]
     uses: ./.github/workflows/trivy.yml
     with:
       image_name: "juicyshop"
