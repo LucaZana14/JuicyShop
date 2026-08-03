@@ -10,7 +10,7 @@ with open("spectral-results.json", "r") as f:
     issues = json.load(f)
     
 # 2. MODIFICA QUI: Python deve leggere il file YAML di VAmPI
-with open("openapi.json", "r") as f:
+with open("swagger.yml", "r") as f:
     openapi_lines = f.readlines()
 
 sarif = {
