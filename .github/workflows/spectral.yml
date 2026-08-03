@@ -1,12 +1,7 @@
 name: Spectral API Scan
 
 on:
-  push:
-
-  pull_request:
-    branches: [main]
-  
-  workflow_dispatch:
+  workflow_call: 
 
 
 permissions: 
@@ -43,7 +38,7 @@ jobs:
         if: always()
         run: |
           python3 .github/scripts/create_report_spectral.py
-          
+
       - name: Genera Report CSV
         if: always()
         run: |

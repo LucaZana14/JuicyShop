@@ -24,12 +24,11 @@ jobs:
 
   trufflehog:
     name: run trufflehog
-    uses: ./.github/workflows/trufflehog.yml 
+    uses: ./.github/workflows/trufflehog.yml
 
   spectral:
     name: run spectral
     uses: ./.github/workflows/spectral.yml 
-  
 
   codeql:
     name: run CodeQL
@@ -78,7 +77,18 @@ jobs:
   upload_to_defectdojo:
     name: Centralizza su DefectDojo
     # Inserisci qui dentro TUTTI i nomi dei job di scansione che hai nel file master
-    needs: [gitleaks, trufflehog, codeql, semgrep, sonarqube, checkov, trivy, zap, nuclei]
+    needs:
+      [
+        gitleaks,
+        trufflehog,
+        codeql,
+        semgrep,
+        sonarqube,
+        checkov,
+        trivy,
+        zap,
+        nuclei,
+      ]
     if: always() # Lo esegue sempre, anche se i tool precedenti hanno trovato vulnerabilità
     uses: ./.github/workflows/defect-dojo-upload.yml # Assicurati che il percorso sia corretto
     with:
